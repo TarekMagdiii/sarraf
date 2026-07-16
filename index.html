@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sarraf · صرّاف — Live EGP Exchange</title>
+<meta name="description" content="Live Egyptian pound exchange rates. Mid-market, sourced, timestamped." />
+<meta name="theme-color" content="#123A31" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="icon" href="./icons/icon-192.png" />
+<link rel="apple-touch-icon" href="./icons/icon-192.png" />
+<style>
+  :root{
+    --paper:#F2ECDB; --paper2:#E9E1CB; --ink:#173B31; --mut:#5F6B5B;
+    --note:#123A31; --note2:#0C2B24; --cream:#F4EFDE; --mut2:#9CB8AB;
+    --gold:#B08A2E; --gold2:#8F6E20; --live:#2F9E63; --line:rgba(23,59,49,.16);
+  }
+  *{box-sizing:border-box; margin:0}
+  html,body{height:100%}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans Arabic",Arial,sans-serif;
+    display:flex; justify-content:center; padding:20px 16px 40px;
+    padding-top:calc(20px + env(safe-area-inset-top));
+    background-image:radial-gradient(1100px 380px at 50% -160px, rgba(176,138,46,.14), transparent 62%);
+    -webkit-tap-highlight-color:transparent;
+  }
+  .num{font-variant-numeric:tabular-nums; letter-spacing:-0.01em}
+  button{font:inherit; color:inherit; background:none; border:none; cursor:pointer; padding:0}
+  button:focus-visible, input:focus-visible{outline:2px solid var(--gold); outline-offset:2px; border-radius:8px}
+  .shell{width:100%; max-width:430px}
+
+  .top{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px}
+  .brand{display:flex; align-items:baseline; gap:10px}
+  .brand h1{font-family:Georgia,"Times New Roman",serif; font-size:26px; font-weight:700; letter-spacing:.01em}
+  .brand span{font-size:12.5px; color:var(--mut); font-weight:600}
+  .langbtn{border:1.5px solid var(--line); border-radius:999px; padding:7px 14px; font-size:13px; font-weight:700; background:rgba(255,255,255,.45)}
+
+  .statusbar{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px}
+  .pill{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700;
+    background:rgba(255,255,255,.55); border:1.5px solid var(--line); border-radius:999px; padding:7px 13px; min-width:0}
+  .pill .txt{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .dot{width:8px; height:8px; border-radius:99px; background:var(--live); flex-shrink:0}
+  .dot.wait{background:var(--gold); animation:pulse 1.1s ease-in-out infinite}
+  .refresh{display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:800; color:var(--gold2); flex-shrink:0}
+  .refresh svg{width:16px; height:16px}
+  .refresh.spin svg{animation:spin 1s linear infinite}
+  .refresh:disabled{opacity:.55}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes pulse{50%{opacity:.35}}
+
+  /* the banknote */
+  .note{position:relative; overflow:hidden; background:linear-gradient(160deg,var(--note),var(--note2));
+    color:var(--cream); border-radius:24px; padding:22px 22px 20px;
+    box-shadow:0 18px 40px -18px rgba(12,43,36,.55), inset 0 0 0 1px rgba(176,138,46,.38), inset 0 0 0 5px rgba(244,239,222,.05)}
+  .note::after{content:""; position:absolute; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(115deg, rgba(244,239,222,.03) 0 2px, transparent 2px 9px)}
+  .wm{position:absolute; inset-inline-end:-14px; bottom:-48px; font-size:170px; font-weight:900; line-height:1;
+    color:rgba(244,239,222,.055); pointer-events:none; user-select:none; font-family:Georgia,serif}
+  .field{position:relative; z-index:1}
+  .lbl{font-size:11.5px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--mut2); margin-bottom:9px}
+  .row{display:flex; align-items:center; gap:12px}
+  .chip{display:inline-flex; align-items:center; gap:8px; background:rgba(244,239,222,.10);
+    border:1px solid rgba(244,239,222,.16); border-radius:999px; padding:9px 14px; font-weight:800; font-size:15px; flex-shrink:0}
+  .chip small{font-size:11px; opacity:.7}
+  .amt{flex:1; min-width:0; background:transparent; border:none; color:var(--cream);
+    font-size:34px; font-weight:800; text-align:right; direction:ltr; width:100%}
+  .amt::placeholder{color:rgba(244,239,222,.35)}
+  .res{flex:1; min-width:0; font-weight:800; text-align:right; direction:ltr; color:var(--cream); overflow-wrap:anywhere; font-size:38px}
+  .div{position:relative; z-index:1; display:flex; align-items:center; margin:16px 0}
+  .div::before,.div::after{content:""; flex:1; border-top:1px dashed rgba(244,239,222,.22)}
+  .swap{width:44px; height:44px; border-radius:99px; background:var(--gold); color:#14100a; display:flex;
+    align-items:center; justify-content:center; margin:0 12px; box-shadow:0 6px 16px -6px rgba(176,138,46,.7);
+    transition:transform .18s ease}
+  .swap:active{transform:rotate(180deg)}
+  .mini{position:relative; z-index:1; margin-top:14px; font-size:12.5px; color:var(--mut2); font-weight:600}
+
+  .board{margin-top:26px}
+  .bhead{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px; gap:10px}
+  .bhead h2{font-size:16px; font-weight:800}
+  .bhead span{font-size:11.5px; color:var(--mut); font-weight:600; text-align:end}
+  .rowline{display:flex; align-items:center; gap:12px; width:100%; padding:14px 4px;
+    border-bottom:1px solid var(--line); text-align:start}
+  .rowline:last-of-type{border-bottom:none}
+  .flag{font-size:22px}
+  .rname{flex:1; min-width:0}
+  .rname b{display:block; font-size:14.5px; font-weight:800}
+  .rname i{display:block; font-style:normal; font-size:12px; color:var(--mut)}
+  .rval{font-size:17px; font-weight:800; direction:ltr}
+  .foot{margin-top:18px; font-size:11.5px; line-height:1.55; color:var(--mut)}
+
+  .scrim{position:fixed; inset:0; background:rgba(12,43,36,.45); backdrop-filter:blur(2px); z-index:40}
+  .sheet{position:fixed; left:0; right:0; bottom:0; z-index:41; background:var(--paper);
+    border-radius:22px 22px 0 0; padding:18px 18px calc(26px + env(safe-area-inset-bottom)); max-width:430px; margin:0 auto;
+    box-shadow:0 -12px 40px rgba(12,43,36,.35)}
+  .sheet h3{font-size:14px; font-weight:800; margin-bottom:8px}
+  .opt{display:flex; align-items:center; gap:12px; width:100%; padding:13px 6px; border-radius:12px; text-align:start}
+  .opt:active{background:var(--paper2)}
+  .opt b{font-size:15px}
+  .opt span{color:var(--mut); font-size:13px}
+  [hidden]{display:none !important}
+
+  .toast{position:fixed; bottom:22px; left:50%; transform:translateX(-50%); z-index:50;
+    background:var(--ink); color:var(--paper); font-size:13px; font-weight:700; padding:11px 16px;
+    border-radius:12px; max-width:88%; text-align:center; box-shadow:0 10px 26px rgba(12,43,36,.4)}
+  @media (prefers-reduced-motion:reduce){.refresh.spin svg,.dot.wait{animation:none}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="top">
+    <div class="brand">
+      <h1 id="brandName">Sarraf</h1>
+      <span id="tagline">Live EGP exchange</span>
+    </div>
+    <button class="langbtn" id="langBtn" aria-label="Switch language">العربية</button>
+  </header>
+
+  <div class="statusbar">
+    <span class="pill">
+      <span class="dot wait" id="statusDot"></span>
+      <span class="txt num" id="statusTxt">…</span>
+    </span>
+    <button class="refresh" id="refreshBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>
+      </svg>
+      <span id="refreshTxt">Update rates</span>
+    </button>
+  </div>
+
+  <section class="note" aria-label="Currency converter">
+    <div class="wm" id="wm" aria-hidden="true">ج.م</div>
+
+    <div class="field">
+      <p class="lbl" id="lblFrom">From</p>
+      <div class="row">
+        <button class="chip" id="fromChip"><span id="fromFlag" aria-hidden="true">🇺🇸</span>&nbsp;<span id="fromCode">USD</span>&nbsp;<small>▾</small></button>
+        <input class="amt num" id="amtInput" inputmode="decimal" placeholder="0" value="100" aria-label="Amount" />
+      </div>
+    </div>
+
+    <div class="div">
+      <button class="swap" id="swapBtn" aria-label="Swap currencies">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M7 4v13M7 17l-3-3M7 17l3-3"/><path d="M17 20V7M17 7l-3 3M17 7l3 3"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="field">
+      <p class="lbl" id="lblTo">To</p>
+      <div class="row">
+        <button class="chip" id="toChip"><span id="toFlag" aria-hidden="true">🇪🇬</span>&nbsp;<span id="toCode">EGP</span>&nbsp;<small>▾</small></button>
+        <div class="res num" id="resVal" aria-live="polite">0</div>
+      </div>
+    </div>
+
+    <p class="mini num" id="miniRate"></p>
+  </section>
+
+  <section class="board">
+    <div class="bhead">
+      <h2 id="boardTitle">Rate board</h2>
+      <span id="boardHint">Per 1 unit · in EGP · tap to convert</span>
+    </div>
+    <div id="boardList"></div>
+    <p class="foot" id="disclaimer"></p>
+  </section>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="sheet" id="sheet" role="dialog" aria-label="Choose currency" hidden>
+  <h3 id="sheetTitle">Choose currency</h3>
+  <div id="sheetList"></div>
+</div>
+
+<div class="toast" id="toastEl" role="status" hidden></div>
+
+<script>
+"use strict";
+
+/* ── data ─────────────────────────────── */
+const CURRENCIES = [
+  { code:"EGP", flag:"🇪🇬", en:"Egyptian Pound", ar:"جنيه مصري", mark:"ج.م" },
+  { code:"USD", flag:"🇺🇸", en:"US Dollar", ar:"دولار أمريكي", mark:"$" },
+  { code:"SAR", flag:"🇸🇦", en:"Saudi Riyal", ar:"ريال سعودي", mark:"ر.س" },
+  { code:"AED", flag:"🇦🇪", en:"UAE Dirham", ar:"درهم إماراتي", mark:"د.إ" },
+  { code:"KWD", flag:"🇰🇼", en:"Kuwaiti Dinar", ar:"دينار كويتي", mark:"د.ك" },
+  { code:"EUR", flag:"🇪🇺", en:"Euro", ar:"يورو", mark:"€" },
+  { code:"GBP", flag:"🇬🇧", en:"British Pound", ar:"جنيه إسترليني", mark:"£" },
+];
+const BASELINE = { USD:50.2, EUR:58.3, GBP:67.4, SAR:13.39, AED:13.67, KWD:163.9 };
+const BASELINE_LABEL = "16 Jul 2026";
+const BOUNDS = { USD:[25,120], EUR:[28,140], GBP:[33,160], SAR:[7,32], AED:[7,33], KWD:[80,400] };
+
+const T = {
+  en: {
+    brand:"Sarraf", tagline:"Live EGP exchange",
+    from:"From", to:"To", amount:"Amount",
+    board:"Rate board", boardHint:"Per 1 unit · in EGP · tap to convert",
+    live:"Live", saved:"Saved", baseline:"Baseline", updating:"Updating…",
+    refresh:"Update rates",
+    disclaimer:"Mid-market rate, refreshed daily by the source. Banks buy lower and sell higher — expect a spread of roughly 10–60 piasters per unit.",
+    fail:"Couldn't update — showing last saved rates.",
+    pick:"Choose currency", lang:"العربية",
+  },
+  ar: {
+    brand:"صرّاف", tagline:"أسعار الجنيه لحظة بلحظة",
+    from:"من", to:"إلى", amount:"المبلغ",
+    board:"لوحة الأسعار", boardHint:"لكل وحدة · بالجنيه · اضغط للتحويل",
+    live:"مباشر", saved:"محفوظ", baseline:"سعر مبدئي", updating:"جارٍ التحديث…",
+    refresh:"تحديث الأسعار",
+    disclaimer:"سعر السوق الوسطي، يُحدَّث يوميًا من المصدر. البنوك تشتري بأقل وتبيع بأعلى — توقّع فرقًا يتراوح بين ١٠ و٦٠ قرشًا للوحدة.",
+    fail:"تعذّر التحديث — نعرض آخر أسعار محفوظة.",
+    pick:"اختر العملة", lang:"EN",
+  },
+};
+
+/* ── state ────────────────────────────── */
+const S = {
+  lang:(navigator.language||"").startsWith("ar") ? "ar" : "en",
+  rates:{...BASELINE},
+  meta:{status:"baseline", label:BASELINE_LABEL, source:""},
+  loading:false,
+  amount:"100", from:"USD", to:"EGP", picker:null,
+};
+
+/* ── helpers ──────────────────────────── */
+const $ = (id) => document.getElementById(id);
+const t = () => T[S.lang];
+const cur = (c) => CURRENCIES.find((x) => x.code === c);
+const AR_D = "٠١٢٣٤٥٦٧٨٩", FA_D = "۰۱۲۳۴۵۶۷۸۹";
+
+function normalizeAmount(raw){
+  let s = "";
+  for (const ch of raw){
+    const a = AR_D.indexOf(ch), f = FA_D.indexOf(ch);
+    if (a > -1) s += a; else if (f > -1) s += f; else s += ch;
+  }
+  s = s.replace(/[^0-9.]/g, "");
+  const i = s.indexOf(".");
+  if (i > -1) s = s.slice(0, i + 1) + s.slice(i + 1).replace(/\./g, "");
+  return s.slice(0, 12);
+}
+function fmt(n, maxFrac = 2){
+  if (!isFinite(n)) return "—";
+  return new Intl.NumberFormat("en-EG", {
+    minimumFractionDigits: n === 0 ? 0 : Math.min(2, maxFrac),
+    maximumFractionDigits: maxFrac,
+  }).format(n);
+}
+function stamp(d){
+  try{ return d.toLocaleString("en-EG", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"}); }
+  catch{ return ""; }
+}
+function validRate(code, v){
+  const b = BOUNDS[code];
+  return b && typeof v === "number" && isFinite(v) && v >= b[0] && v <= b[1];
+}
+
+/* ── persistence ──────────────────────── */
+function saveRates(){
+  try{ localStorage.setItem("sarraf.rates", JSON.stringify({rates:S.rates, meta:S.meta})); }catch{}
+}
+function savePrefs(){
+  try{ localStorage.setItem("sarraf.prefs", JSON.stringify({lang:S.lang, from:S.from, to:S.to})); }catch{}
+}
+function restore(){
+  try{
+    const p = JSON.parse(localStorage.getItem("sarraf.prefs") || "null");
+    if (p){
+      if (T[p.lang]) S.lang = p.lang;
+      if (cur(p.from)) S.from = p.from;
+      if (cur(p.to)) S.to = p.to;
+    }
+    const r = JSON.parse(localStorage.getItem("sarraf.rates") || "null");
+    if (r && r.rates && validRate("USD", r.rates.USD)){
+      Object.keys(BOUNDS).forEach((c) => { if (validRate(c, r.rates[c])) S.rates[c] = r.rates[c]; });
+      S.meta = { status:"saved", label:(r.meta && r.meta.label) || "", source:(r.meta && r.meta.source) || "" };
+    }
+  }catch{}
+}
+
+/* ── live fetch: two keyless sources ──── */
+async function fromOpenER(){
+  const res = await fetch("https://open.er-api.com/v6/latest/USD", {cache:"no-store"});
+  const j = await res.json();
+  if (j.result !== "success" || !j.rates || !j.rates.EGP) throw new Error("bad payload");
+  const out = {};
+  ["USD","EUR","GBP","SAR","AED","KWD"].forEach((c) => {
+    const per = c === "USD" ? j.rates.EGP : j.rates.EGP / j.rates[c];
+    out[c] = per;
+  });
+  const when = j.time_last_update_unix ? new Date(j.time_last_update_unix * 1000) : new Date();
+  return { rates:out, source:"open.er-api", label:stamp(when) };
+}
+async function fromMirror(){
+  const res = await fetch("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/egp.min.json", {cache:"no-store"});
+  const j = await res.json();
+  if (!j.egp) throw new Error("bad payload");
+  const out = {};
+  ["usd","eur","gbp","sar","aed","kwd"].forEach((k) => {
+    const v = j.egp[k];
+    if (v) out[k.toUpperCase()] = 1 / v;
+  });
+  return { rates:out, source:"currency-api", label:j.date || stamp(new Date()) };
+}
+async function fetchLive(){
+  if (S.loading) return;
+  S.loading = true; updateStatus();
+  try{
+    let payload = null;
+    try{ payload = await fromOpenER(); }
+    catch{ payload = await fromMirror(); }
+    if (!validRate("USD", payload.rates.USD)) throw new Error("usd failed sanity");
+    Object.keys(BOUNDS).forEach((c) => { if (validRate(c, payload.rates[c])) S.rates[c] = payload.rates[c]; });
+    S.meta = { status:"live", label:payload.label, source:payload.source };
+    saveRates();
+  }catch{
+    toast(t().fail);
+  }finally{
+    S.loading = false;
+    updateStatus(); renderBoard(); compute();
+  }
+}
+
+/* ── rendering ────────────────────────── */
+function updateStatus(){
+  const m = S.meta, tr = t();
+  $("statusDot").className = "dot" + (S.loading || m.status !== "live" ? " wait" : "");
+  $("statusTxt").textContent = S.loading ? tr.updating :
+    m.status === "live" ? tr.live + " · " + m.source + " · " + m.label :
+    m.status === "saved" ? tr.saved + (m.label ? " · " + m.label : "") :
+    tr.baseline + " · " + m.label;
+  const btn = $("refreshBtn");
+  btn.disabled = S.loading;
+  btn.className = "refresh" + (S.loading ? " spin" : "");
+}
+function compute(){
+  const egpOf = (c) => (c === "EGP" ? 1 : S.rates[c]);
+  const rate = egpOf(S.from) / egpOf(S.to);
+  const num = parseFloat(S.amount) || 0;
+  const result = num * rate;
+  const str = fmt(result, S.to === "KWD" ? 3 : 2);
+  const el = $("resVal");
+  el.textContent = str;
+  el.style.fontSize = str.length > 11 ? "26px" : "38px";
+  $("miniRate").textContent = "1 " + S.from + " = " + fmt(rate, rate < 1 ? 4 : 2) + " " + S.to;
+  $("wm").textContent = cur(S.to).mark;
+  $("fromFlag").textContent = cur(S.from).flag;
+  $("fromCode").textContent = S.from;
+  $("toFlag").textContent = cur(S.to).flag;
+  $("toCode").textContent = S.to;
+}
+function renderBoard(){
+  const rtl = S.lang === "ar";
+  const list = $("boardList");
+  list.innerHTML = "";
+  CURRENCIES.filter((c) => c.code !== "EGP").forEach((c) => {
+    const b = document.createElement("button");
+    b.className = "rowline";
+    b.innerHTML =
+      '<span class="flag" aria-hidden="true">' + c.flag + '</span>' +
+      '<span class="rname"><b>' + c.code + '</b><i>' + (rtl ? c.ar : c.en) + '</i></span>' +
+      '<span class="rval num">' + fmt(S.rates[c.code], 2) + '</span>';
+    b.addEventListener("click", () => { S.from = c.code; S.to = "EGP"; savePrefs(); compute(); });
+    list.appendChild(b);
+  });
+}
+function applyLang(){
+  const tr = t(), rtl = S.lang === "ar";
+  document.documentElement.lang = rtl ? "ar" : "en";
+  document.documentElement.dir = rtl ? "rtl" : "ltr";
+  $("brandName").textContent = tr.brand;
+  $("tagline").textContent = tr.tagline;
+  $("langBtn").textContent = tr.lang;
+  $("lblFrom").textContent = tr.from;
+  $("lblTo").textContent = tr.to;
+  $("refreshTxt").textContent = tr.refresh;
+  $("boardTitle").textContent = tr.board;
+  $("boardHint").textContent = tr.boardHint;
+  $("disclaimer").textContent = tr.disclaimer;
+  $("sheetTitle").textContent = tr.pick;
+  $("amtInput").setAttribute("aria-label", tr.amount);
+  updateStatus(); renderBoard(); compute();
+}
+
+/* ── picker & toast ───────────────────── */
+function openPicker(which){
+  S.picker = which;
+  const rtl = S.lang === "ar";
+  const list = $("sheetList");
+  list.innerHTML = "";
+  CURRENCIES.forEach((c) => {
+    const b = document.createElement("button");
+    b.className = "opt";
+    b.innerHTML =
+      '<span class="flag" aria-hidden="true">' + c.flag + '</span>' +
+      '<b>' + c.code + '</b><span>' + (rtl ? c.ar : c.en) + '</span>';
+    b.addEventListener("click", () => choose(c.code));
+    list.appendChild(b);
+  });
+  $("scrim").hidden = false;
+  $("sheet").hidden = false;
+}
+function closePicker(){ S.picker = null; $("scrim").hidden = true; $("sheet").hidden = true; }
+function choose(code){
+  if (S.picker === "from"){ if (code === S.to) S.to = S.from; S.from = code; }
+  if (S.picker === "to"){ if (code === S.from) S.from = S.to; S.to = code; }
+  closePicker(); savePrefs(); compute();
+}
+let toastTimer = null;
+function toast(msg){
+  const el = $("toastEl");
+  el.textContent = msg; el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, 4500);
+}
+
+/* ── wire up & boot ───────────────────── */
+$("langBtn").addEventListener("click", () => { S.lang = S.lang === "ar" ? "en" : "ar"; savePrefs(); applyLang(); });
+$("amtInput").addEventListener("input", (e) => { S.amount = normalizeAmount(e.target.value); e.target.value = S.amount; compute(); });
+$("swapBtn").addEventListener("click", () => { const f = S.from; S.from = S.to; S.to = f; savePrefs(); compute(); });
+$("fromChip").addEventListener("click", () => openPicker("from"));
+$("toChip").addEventListener("click", () => openPicker("to"));
+$("scrim").addEventListener("click", closePicker);
+
+restore();
+applyLang();
+fetchLive();
+
+if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0){
+  navigator.serviceWorker.register("./sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>
